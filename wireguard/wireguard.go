@@ -5,10 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
 
 	"github.com/coreos/go-iptables/iptables"
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -23,7 +21,7 @@ const (
 
 var (
 	endPoint     string
-	listenPort   = int(5253)
+	listenPort = int(5253)
 )
 
 // Bandwidth ...
@@ -49,7 +47,6 @@ type WireGuard struct {
 
 // NewWireGuard ...
 func NewWireGuard(port uint16, ip net.IP, protocol, encryption string) (*WireGuard, error) {
-
 	client, err := wgctrl.New()
 	if err != nil {
 		log.Println(err)
@@ -116,21 +113,18 @@ func (wg WireGuard) setNATRouting() error {
 func (wg WireGuard) addWireGuardDevice() error {
 	dev, _ := wg.client.Device(interfaceName)
 	if dev != nil {
-		cmmd := exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s ",
-			interfaceName))
+		cmmd := exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s ", interfaceName))
 		_ = cmmd.Run()
 	}
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link add dev %s type" + "wireguard", interfaceName))
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-	cmd = exec.Command("sh", "-c", fmt.Sprintf("ip -4 address add 10.0.0.1/24"+
-		" dev %s", interfaceName))
+	cmd = exec.Command("sh", "-c", fmt.Sprintf("ip -4 address add 10.0.0.1/24 dev %s", interfaceName))
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-	cmd = exec.Command("sh", "-c", fmt.Sprintf("ip link set mtu 1420 up dev %s",
-		interfaceName))
+	cmd = exec.Command("sh", "-c", fmt.Sprintf("ip link set mtu 1420 up dev %s", interfaceName))
 	return cmd.Run()
 }
 
@@ -172,8 +166,7 @@ func (wg WireGuard) Start() error {
 
 // Stop ...
 func (wg WireGuard) Stop() error {
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s",
-		interfaceName))
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s", interfaceName))
 	err := cmd.Run()
 	ipt, _ := iptables.New()
 	_ = ipt.Delete("filter", "FORWARD", "-i", interfaceName, "-j", "ACCEPT")
