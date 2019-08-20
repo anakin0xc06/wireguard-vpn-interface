@@ -1,4 +1,4 @@
-package main
+package wireguard
 
 import (
 	"fmt"
@@ -22,7 +22,6 @@ const (
 )
 
 var (
-	allocatedIps map[wgtypes.Key]string
 	endPoint     string
 	listenPort   = int(5253)
 )
@@ -66,13 +65,11 @@ func NewWireGuard(port uint16, ip net.IP, protocol, encryption string) (*WireGua
 }
 
 func (wg WireGuard) saveKeys(public, private wgtypes.Key) error {
-	err := ioutil.WriteFile(serverKeysPath+"privkey", []byte(private.String()),
-		os.ModePerm)
+	err := ioutil.WriteFile(serverKeysPath+"privkey", []byte(private.String()), os.ModePerm)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(serverKeysPath+"pubkey", []byte(public.String()),
-		os.ModePerm)
+	err = ioutil.WriteFile(serverKeysPath+"pubkey", []byte(public.String()), os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -123,8 +120,7 @@ func (wg WireGuard) addWireGuardDevice() error {
 			interfaceName))
 		_ = cmmd.Run()
 	}
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link add dev %s "+
-		"type wireguard", interfaceName))
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link add dev %s type" + "wireguard", interfaceName))
 	if err := cmd.Run(); err != nil {
 		return err
 	}
@@ -242,8 +238,7 @@ func (wg WireGuard) GenerateClientKey(pubkey string) ([]byte, error) {
 
 	allowedip := fmt.Sprint(peer.AllowedIPs[0].IP)
 	clientCreds := fmt.Sprintf("PublicKey: %s\nIP: %s\nEndPoint: %s\nAllowedIPs:"+
-		"0.0.0.0/0\nPersistentKeepAlive:21", dev.PublicKey.String(), allowedip,
-		endPoint)
+		"0.0.0.0/0\nPersistentKeepAlive:21", dev.PublicKey.String(), allowedip, endPoint)
 	return []byte(clientCreds), nil
 }
 
