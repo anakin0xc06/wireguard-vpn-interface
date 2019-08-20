@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	endPoint     string
+	endPoint   string
 	listenPort = int(5253)
 )
 
@@ -116,7 +116,7 @@ func (wg WireGuard) addWireGuardDevice() error {
 		cmmd := exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s ", interfaceName))
 		_ = cmmd.Run()
 	}
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link add dev %s type" + "wireguard", interfaceName))
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link add dev %s type wireguard", interfaceName))
 	if err := cmd.Run(); err != nil {
 		return err
 	}
