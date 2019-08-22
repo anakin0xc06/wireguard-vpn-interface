@@ -74,7 +74,7 @@ func (wg WireGuard) saveKeys(public, private wgtypes.Key) error {
 }
 
 func (wg WireGuard) generateServerKeys() (Keys, error) {
-	fmt.Print("Generating server keys ....\n\n")
+	fmt.Print("\nGenerating server keys ...\n")
 	privateKey, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
 		return Keys{}, err
