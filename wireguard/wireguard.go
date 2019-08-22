@@ -74,12 +74,12 @@ func (wg WireGuard) saveKeys(public, private wgtypes.Key) error {
 }
 
 func (wg WireGuard) generateServerKeys() (Keys, error) {
+	fmt.Print("Generating server keys ....\n\n")
 	privateKey, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
 		return Keys{}, err
 	}
 	publicKey := privateKey.PublicKey()
-
 	fmt.Println("PrivateKey: ", privateKey)
 	fmt.Println("PublicKey: ", publicKey)
 
@@ -111,6 +111,7 @@ func (wg WireGuard) setNATRouting() error {
 }
 
 func (wg WireGuard) addWireGuardDevice() error {
+	fmt.Print("\nAdding wireguard device ...\n")
 	dev, _ := wg.client.Device(interfaceName)
 	if dev != nil {
 		cmmd := exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s ", interfaceName))
@@ -130,7 +131,7 @@ func (wg WireGuard) addWireGuardDevice() error {
 
 // Init ...
 func (wg WireGuard) Init() error {
-	log.Printf("Initializing the WireGuard server")
+	fmt.Printf("\nInitializing the WireGuard server")
 
 	if err := wg.addWireGuardDevice(); err != nil {
 		return err
@@ -156,6 +157,7 @@ func (wg WireGuard) generateConfig() (wgtypes.Config, error) {
 
 // Start ...
 func (wg WireGuard) Start() error {
+	fmt.Print("\nStarting WireGuard Device ...\n")
 	cfg, err := wg.generateConfig()
 	if err != nil {
 		return err
@@ -166,6 +168,7 @@ func (wg WireGuard) Start() error {
 
 // Stop ...
 func (wg WireGuard) Stop() error {
+	fmt.Print("\nStopping WireGuard Device ...\n")
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s", interfaceName))
 	err := cmd.Run()
 	ipt, _ := iptables.New()
@@ -206,6 +209,7 @@ func (wg WireGuard) generateAllowedIP() ([]net.IPNet, error) {
 
 // GenerateClientKey ...
 func (wg WireGuard) GenerateClientKey(pubkey string) ([]byte, error) {
+	fmt.Print("\nAdding Peer to WireGuard Device ...\n")
 	publicKey, err := wgtypes.ParseKey(pubkey)
 	if err != nil {
 		return []byte{}, err
@@ -236,8 +240,8 @@ func (wg WireGuard) GenerateClientKey(pubkey string) ([]byte, error) {
 }
 
 // ClientList ...
-func (wg WireGuard) ClientList() (map[string]Bandwidth, error) {
-
+func (wg WireGuard) ClientsList() (map[string]Bandwidth, error) {
+	fmt.Print("\nGetting clients usage list ...\n")
 	clientsUsageMap := map[string]Bandwidth{}
 	wgData, err := wg.client.Device(interfaceName)
 	if err != nil {
@@ -246,7 +250,6 @@ func (wg WireGuard) ClientList() (map[string]Bandwidth, error) {
 
 	for _, peer := range wgData.Peers {
 		pubkey := peer.PublicKey
-		// timeSecs := peer.LastHandshakeTime
 		usage := Bandwidth{upload: peer.ReceiveBytes, download: peer.TransmitBytes}
 		if len(pubkey) > 0 && usage.download > 0 {
 			clientsUsageMap[pubkey.String()] = usage
@@ -257,6 +260,7 @@ func (wg WireGuard) ClientList() (map[string]Bandwidth, error) {
 
 // DisconnectClient ...
 func (wg WireGuard) DisconnectClient(pubkey string) error {
+	fmt.Print("\nDisconnecting client ...\n")
 	publicKey, err := wgtypes.ParseKey(pubkey)
 	if err != nil {
 		return err
@@ -274,6 +278,11 @@ func (wg WireGuard) DisconnectClient(pubkey string) error {
 		log.Println("err:", err)
 		return err
 	}
+	return nil
+}
+
+// RevokeClient ...
+func (wg WireGuard) RevokeClient(id string) error {
 	return nil
 }
 
