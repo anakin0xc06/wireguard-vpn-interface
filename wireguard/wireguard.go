@@ -180,7 +180,7 @@ func (wg WireGuard) Stop() error {
 
 // Type ...
 func (wg WireGuard) Type() string {
-	return _type
+	return Type
 }
 
 // Encryption ...
