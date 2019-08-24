@@ -9,7 +9,7 @@ func cmdAddDevLink(_inteface, _type string) string {
   return exec.Command("sh", "-c", fmt.Sprintf("ip link add dev %s type %s", _interface, _type)
 }
 
-func cmdDelDevLink(_interface string) string {
+func cmdDeleteDevLink(_interface string) string {
   return exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s", _interface)
 }
 
