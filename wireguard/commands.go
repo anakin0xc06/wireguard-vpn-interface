@@ -17,11 +17,11 @@ func cmdSetDevMTU(_interface string, mtu int) string {
   return exec.Command("sh", "-c", fmt.Sprintf("ip link set mtu %d up dev %s", mtu, _interface)
 }
 
-func cmdAddDevAddressIPv4(addr, _interface string) string {
+func cmdAddDevAddressIPv4(_interface, addr string) string {
   return exec.Command("sh", "-c", fmt.Sprintf("ip -4 address add %s dev %s", addr, _interface)
 }
 
-func cmdAddDevAdressIPv6(addr, _interface string) string {
+func cmdAddDevAdressIPv6(_interface, addr string) string {
   return exec.Command("sh", "-c", fmt.Sprintf("ip -6 address add %s dev %s", addr, _interface)
 }
 
