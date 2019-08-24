@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/coreos/go-iptables/iptables"
 	hub "github.com/sentinel-official/hub/types"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -74,16 +73,12 @@ func (wg WireGuard) saveKeys(public, private wgtypes.Key) error {
 	return nil
 }
 
-func (wg WireGuard) generateServerKeys() (Keys, error) {
-	fmt.Print("\nGenerating server keys ...\n")
+func (wg WireGuard) generateKeys() (Keys, error) {
 	privateKey, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
 		return Keys{}, err
 	}
 	publicKey := privateKey.PublicKey()
-	fmt.Println("PrivateKey: ", privateKey)
-	fmt.Println("PublicKey: ", publicKey)
-
 	return Keys{
 		PrivateKey: privateKey,
 		PublicKey:  publicKey,
@@ -97,7 +92,7 @@ func (wg WireGuard) setNATRouting() error {
 
 func (wg WireGuard) addWireGuardDevice() error {
 	fmt.Print("\nAdding wireguard device ...\n")
-	dev, err := wg.client.Device(interfaceName)
+	dev, err := wg.client.Device(_interface)
 	if err ! = nil {
 		return err
 	}
@@ -130,7 +125,7 @@ func (wg WireGuard) Init() error {
 }
 
 func (wg WireGuard) generateConfig() (wgtypes.Config, error) {
-	keys, err := wg.generateServerKeys()
+	keys, err := wg.generateKeys()
 	if err != nil {
 		return wgtypes.Config{}, err
 	}
@@ -193,9 +188,9 @@ func (wg WireGuard) generateAllowedIP() ([]net.IPNet, error) {
 }
 
 // GenerateClientKey ...
-func (wg WireGuard) GenerateClientKey(pubkey string) ([]byte, error) {
+func (wg WireGuard) GenerateClientKey() ([]byte, error) {
 	fmt.Print("\nAdding Peer to WireGuard Device ...\n")
-	publicKey, err := wgtypes.ParseKey(pubkey)
+	keys, err := wg.generateKeys()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -204,23 +199,23 @@ func (wg WireGuard) GenerateClientKey(pubkey string) ([]byte, error) {
 		return []byte{}, err
 	}
 	peer := wgtypes.PeerConfig{
-		PublicKey:  publicKey,
+		PublicKey:  keys.PublicKey,
 		AllowedIPs: availableIP,
 	}
 	cfg := wgtypes.Config{
 		ReplacePeers: false,
 		Peers:        []wgtypes.PeerConfig{peer},
 	}
-	err = wg.client.ConfigureDevice(interfaceName, cfg)
+	err = wg.client.ConfigureDevice(_interface, cfg)
 	if err != nil {
 		log.Println("err:", err)
 		return []byte(""), err
 	}
-	dev, _ := wg.client.Device(interfaceName)
+	dev, _ := wg.client.Device(_interface)
 
-	allowedip := fmt.Sprint(peer.AllowedIPs[0].IP)
-	clientConf := fmt.Sprintf("PublicKey: %s\nIP: %s\nEndPoint: %s\nAllowedIPs:"+
-		"0.0.0.0/0\nPersistentKeepAlive:21", dev.PublicKey.String(), allowedip, endPoint)
+	allowedIP := fmt.Sprint(peer.AllowedIPs[0].IP)
+	clientConf := fmt.Sprintf(clientConfigTemplate, keys.PrivateKey.String(), allowedIP,
+				  dev.PublicKey.String(), endPoint)
 	return []byte(clientCreds), nil
 }
 
