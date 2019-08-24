@@ -1,12 +1,13 @@
 package wireguard
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
+	"net/http"
 	"os"
-	"os/exec"
 
 	hub "github.com/sentinel-official/hub/types"
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -14,14 +15,14 @@ import (
 )
 
 const (
-	Type          = "WireGuard"
+	Type           = "WireGuard"
 	serverKeysPath = "/etc/wireguard/"
-	_interface  = "wg0"
+	_interface     = "wg0"
 )
 
 var (
 	endPoint   string
-	listenPort = int(5253)
+	listenPort = 5253
 )
 
 // Bandwidth ...
@@ -43,6 +44,9 @@ type WireGuard struct {
 	ip         net.IP
 	protocol   string
 	encryption string
+}
+type PublicIP struct {
+	IP string `json:"ip"`
 }
 
 // NewWireGuard ...
@@ -92,13 +96,10 @@ func (wg WireGuard) setNATRouting() error {
 
 func (wg WireGuard) addWireGuardDevice() error {
 	fmt.Print("\nAdding wireguard device ...\n")
-	dev, err := wg.client.Device(_interface)
-	if err ! = nil {
-		return err
-	}
+	dev, _ := wg.client.Device(_interface)
 	if dev != nil {
 		cmd := cmdDeleteDevLink(_interface)
-		if err = cmd.Run(); err != nil {
+		if err := cmd.Run(); err != nil {
 			return err
 		}
 	}
@@ -106,8 +107,9 @@ func (wg WireGuard) addWireGuardDevice() error {
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-	cmd = cmdAddDevAddressIPv4("10.0.0.1/24", _interface)
+	cmd = cmdAddDevAddressIPv4(_interface, "10.0.0.1/24")
 	if err := cmd.Run(); err != nil {
+		log.Println("3", err)
 		return err
 	}
 	cmd = cmdSetDevMTU(_interface, 1420)
@@ -117,10 +119,19 @@ func (wg WireGuard) addWireGuardDevice() error {
 // Init ...
 func (wg WireGuard) Init() error {
 	fmt.Printf("\nInitializing the WireGuard server")
-
 	if err := wg.addWireGuardDevice(); err != nil {
 		return err
 	}
+	resp, err := http.Get("https://api.ipify.org/?format=json")
+	if err != nil {
+		return err
+	}
+	var res PublicIP
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	endPoint = fmt.Sprintf("%s:%d", res.IP, listenPort)
 	return wg.setNATRouting()
 }
 
@@ -154,7 +165,7 @@ func (wg WireGuard) Start() error {
 // Stop ...
 func (wg WireGuard) Stop() error {
 	fmt.Print("\nStopping WireGuard Device ...\n")
-	cmd := cmdDelDevLink(_interface)
+	cmd := cmdDeleteDevLink(_interface)
 	return cmd.Run()
 }
 
@@ -214,12 +225,12 @@ func (wg WireGuard) GenerateClientKey() ([]byte, error) {
 	dev, _ := wg.client.Device(_interface)
 
 	allowedIP := fmt.Sprint(peer.AllowedIPs[0].IP)
-	clientConf := fmt.Sprintf(clientConfigTemplate, keys.PrivateKey.String(), allowedIP,
-				  dev.PublicKey.String(), endPoint)
-	return []byte(clientCreds), nil
+	clientConfig := fmt.Sprintf(clientConfigTemplate, keys.PrivateKey.String(), allowedIP,
+		dev.PublicKey.String(), endPoint)
+	return []byte(clientConfig), nil
 }
 
-// ClientList ...
+// ClientsList ...
 func (wg WireGuard) ClientsList() (map[string]hub.Bandwidth, error) {
 	// fmt.Print("\nGetting clients usage list ...\n")
 	clientsUsageMap := map[string]hub.Bandwidth{}
