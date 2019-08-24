@@ -1,3 +1,5 @@
+package wireguard
+
 var (
   serverConfigTemplate = `[Interface]
 Address = %s
