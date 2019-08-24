@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	_type          = "WireGuard"
+	Type          = "WireGuard"
 	serverKeysPath = "/etc/wireguard/"
 	interfaceName  = "wg0"
 )
