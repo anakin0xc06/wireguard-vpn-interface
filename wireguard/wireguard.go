@@ -16,7 +16,7 @@ import (
 const (
 	Type          = "WireGuard"
 	serverKeysPath = "/etc/wireguard/"
-	interfaceName  = "wg0"
+	_interface  = "wg0"
 )
 
 var (
@@ -95,7 +95,7 @@ func (wg WireGuard) setNATRouting() error {
 		fmt.Println("err: ", err)
 		return err
 	}
-	err = ipt.AppendUnique("filter", "FORWARD", "-i", interfaceName, "-j", "ACCEPT")
+	err = ipt.AppendUnique("filter", "FORWARD", "-i", _interface, "-j", "ACCEPT")
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (wg WireGuard) setNATRouting() error {
 	if err != nil {
 		return err
 	}
-	err = ipt.AppendUnique("filter", "FORWARD", "-o", interfaceName, "-j", "ACCEPT")
+	err = ipt.AppendUnique("filter", "FORWARD", "-o", _interface, "-j", "ACCEPT")
 	if err != nil {
 		return err
 	}
@@ -114,18 +114,18 @@ func (wg WireGuard) addWireGuardDevice() error {
 	fmt.Print("\nAdding wireguard device ...\n")
 	dev, _ := wg.client.Device(interfaceName)
 	if dev != nil {
-		cmmd := exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s ", interfaceName))
+		cmmd := exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s ", _interface))
 		_ = cmmd.Run()
 	}
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link add dev %s type wireguard", interfaceName))
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link add dev %s type wireguard", _interface))
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-	cmd = exec.Command("sh", "-c", fmt.Sprintf("ip -4 address add 10.0.0.1/24 dev %s", interfaceName))
+	cmd = exec.Command("sh", "-c", fmt.Sprintf("ip -4 address add 10.0.0.1/24 dev %s", _interface))
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-	cmd = exec.Command("sh", "-c", fmt.Sprintf("ip link set mtu 1420 up dev %s", interfaceName))
+	cmd = exec.Command("sh", "-c", fmt.Sprintf("ip link set mtu 1420 up dev %s", _interface))
 	return cmd.Run()
 }
 
@@ -234,7 +234,7 @@ func (wg WireGuard) GenerateClientKey(pubkey string) ([]byte, error) {
 	dev, _ := wg.client.Device(interfaceName)
 
 	allowedip := fmt.Sprint(peer.AllowedIPs[0].IP)
-	clientCreds := fmt.Sprintf("PublicKey: %s\nIP: %s\nEndPoint: %s\nAllowedIPs:"+
+	clientConf := fmt.Sprintf("PublicKey: %s\nIP: %s\nEndPoint: %s\nAllowedIPs:"+
 		"0.0.0.0/0\nPersistentKeepAlive:21", dev.PublicKey.String(), allowedip, endPoint)
 	return []byte(clientCreds), nil
 }
