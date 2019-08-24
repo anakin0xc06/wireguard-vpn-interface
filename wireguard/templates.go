@@ -11,7 +11,7 @@ PublicKey = %s
 AllowedIps = %s`
   clientConfTemplate = `[Interface]
 PrivateKey = %s
-Address = %s
+Address = %s/24
 	
 [Peer]
 PublicKey = %s
