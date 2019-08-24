@@ -2,7 +2,7 @@ package wireguard
 
 import (
   "fmt"
-  "exec"
+  "os/exec"
 )
 
 func cmdAddDevLink(_inteface, _type string) string {
