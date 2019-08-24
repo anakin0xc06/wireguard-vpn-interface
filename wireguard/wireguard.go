@@ -148,7 +148,7 @@ func (wg WireGuard) Start() error {
 		return err
 	}
 
-	return wg.client.ConfigureDevice(interfaceName, cfg)
+	return wg.client.ConfigureDevice(_interface, cfg)
 }
 
 // Stop ...
@@ -170,7 +170,7 @@ func (wg WireGuard) Encryption() string {
 
 func (wg WireGuard) generateAllowedIP() ([]net.IPNet, error) {
 	var allowedIPs []net.IP
-	dev, err := wg.client.Device(interfaceName)
+	dev, err := wg.client.Device(_interface)
 	if err != nil {
 		return []net.IPNet{}, err
 	}
@@ -255,7 +255,7 @@ func (wg WireGuard) DisconnectClient(pubkey string) error {
 		ReplacePeers: false,
 		Peers:        []wgtypes.PeerConfig{peer},
 	}
-	err = wg.client.ConfigureDevice(interfaceName, cfg)
+	err = wg.client.ConfigureDevice(_interface, cfg)
 	if err != nil {
 		log.Println("err:", err)
 		return err
