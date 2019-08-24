@@ -9,6 +9,7 @@ import (
 	"os/exec"
 
 	"github.com/coreos/go-iptables/iptables"
+	hub "github.com/sentinel-official/hub/types"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
@@ -90,42 +91,31 @@ func (wg WireGuard) generateServerKeys() (Keys, error) {
 }
 
 func (wg WireGuard) setNATRouting() error {
-	ipt, err := iptables.New()
-	if err != nil {
-		fmt.Println("err: ", err)
-		return err
-	}
-	err = ipt.AppendUnique("filter", "FORWARD", "-i", _interface, "-j", "ACCEPT")
-	if err != nil {
-		return err
-	}
-	err = ipt.AppendUnique("nat", "POSTROUTING", "-o", "eth0", "-j", "MASQUERADE")
-	if err != nil {
-		return err
-	}
-	err = ipt.AppendUnique("filter", "FORWARD", "-o", _interface, "-j", "ACCEPT")
-	if err != nil {
-		return err
-	}
-	return nil
+	cmd := cmdSetNATRouting(_interface)
+	return cmd.Run()
 }
 
 func (wg WireGuard) addWireGuardDevice() error {
 	fmt.Print("\nAdding wireguard device ...\n")
-	dev, _ := wg.client.Device(interfaceName)
+	dev, err := wg.client.Device(interfaceName)
+	if err ! = nil {
+		return err
+	}
 	if dev != nil {
-		cmmd := exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s ", _interface))
-		_ = cmmd.Run()
+		cmd := cmdDeleteDevLink(_interface)
+		if err = cmd.Run(); err != nil {
+			return err
+		}
 	}
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link add dev %s type wireguard", _interface))
+	cmd := cmdAddDevLink(_interface, "wireguard")
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-	cmd = exec.Command("sh", "-c", fmt.Sprintf("ip -4 address add 10.0.0.1/24 dev %s", _interface))
+	cmd = cmdAddDevAddressIPv4("10.0.0.1/24", _interface)
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-	cmd = exec.Command("sh", "-c", fmt.Sprintf("ip link set mtu 1420 up dev %s", _interface))
+	cmd = cmdSetDevMTU(_interface, 1420)
 	return cmd.Run()
 }
 
@@ -169,13 +159,8 @@ func (wg WireGuard) Start() error {
 // Stop ...
 func (wg WireGuard) Stop() error {
 	fmt.Print("\nStopping WireGuard Device ...\n")
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("ip link del dev %s", interfaceName))
-	err := cmd.Run()
-	ipt, _ := iptables.New()
-	_ = ipt.Delete("filter", "FORWARD", "-i", interfaceName, "-j", "ACCEPT")
-	_ = ipt.Delete("nat", "POSTROUTING", "-o", "eth0", "-j", "MASQUERADE")
-	_ = ipt.Delete("filter", "FORWARD", "-o", interfaceName, "-j", "ACCEPT")
-	return err
+	cmd := cmdDelDevLink(_interface)
+	return cmd.Run()
 }
 
 // Type ...
@@ -240,19 +225,21 @@ func (wg WireGuard) GenerateClientKey(pubkey string) ([]byte, error) {
 }
 
 // ClientList ...
-func (wg WireGuard) ClientsList() (map[string]Bandwidth, error) {
-	fmt.Print("\nGetting clients usage list ...\n")
-	clientsUsageMap := map[string]Bandwidth{}
-	wgData, err := wg.client.Device(interfaceName)
+func (wg WireGuard) ClientsList() (map[string]hub.Bandwidth, error) {
+	// fmt.Print("\nGetting clients usage list ...\n")
+	clientsUsageMap := map[string]hub.Bandwidth{}
+	wgData, err := wg.client.Device(_interface)
 	if err != nil {
 		return clientsUsageMap, err
 	}
 
 	for _, peer := range wgData.Peers {
 		pubkey := peer.PublicKey
-		usage := Bandwidth{upload: peer.ReceiveBytes, download: peer.TransmitBytes}
-		if len(pubkey) > 0 && usage.download > 0 {
+		usage := hub.NewBandwidthFromInt64(peer.ReceiveBytes, peer.TransmitBytes)
+		if peer.LastHandshakeTime.Minute() < 3 {
 			clientsUsageMap[pubkey.String()] = usage
+		} else {
+			wg.DisconnectClient(pubkey.String())
 		}
 	}
 	return clientsUsageMap, nil
